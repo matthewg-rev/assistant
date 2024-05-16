@@ -1,6 +1,29 @@
 import pyaudio
 import speech_recognition
 import wave
+import os
+import sys
+
+dependencies = ["pyaudio", "speech_recognition", "wave", "vosk"]
+
+# check if we are ran in sudo
+if os.geteuid() != 0:
+    print("Please run as root")
+    sys.exit()
+
+# check if dependencies are installed
+for dependency in dependencies:
+    try:
+        __import__(dependency)
+    except ImportError:
+        print(f"Dependency {dependency} is not installed")
+        print("Would you like to install it? (y/n)")
+        answer = input()
+        if answer.lower() == "y":
+            os.system(f"pip3 install {dependency}")
+        else:
+            print("Exiting...")
+            sys.exit()
 
 RESPEAKER_RATE = 16000
 RESPEAKER_CHANNELS = 2
@@ -30,6 +53,6 @@ while True:
     except Exception as e:
         print(e)
 
-stream.stop_stream()
-stream.close()
-p.terminate()
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
