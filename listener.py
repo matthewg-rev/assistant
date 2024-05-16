@@ -34,7 +34,7 @@ for dependency in dependencies:
 for dependency in non_imported_dependencies:
     if not importlib.util.find_spec(dependency):
         print(f"Installing {dependency}")
-        result = os.system(f"pip3 -m install {dependency}")
+        result = os.system(f"pip3 install {dependency}")
         if result != 0:
             print(f"Failed to install {dependency}.")
             sys.exit()
