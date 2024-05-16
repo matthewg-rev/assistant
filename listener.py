@@ -1,6 +1,3 @@
-import pyaudio
-import speech_recognition
-import wave
 import os
 import sys
 
