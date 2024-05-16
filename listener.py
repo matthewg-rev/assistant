@@ -3,7 +3,7 @@ import sys
 
 dependencies = {
     "pyaudio": "pyaudio",
-    "speech_recognition": "speech_recognition",
+    "speech_recognition": "speechrecognition",
     "vosk": "vosk",
 }
 
