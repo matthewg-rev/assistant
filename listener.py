@@ -2,15 +2,17 @@ import os
 import sys
 import importlib
 
+from queue import Queue
+from threading import Thread
+
 dependencies = {
     "pyaudio": "pyaudio",
     "speech_recognition": "speechrecognition",
-    "vosk": "vosk",
 }
 
-model_options = {
-    "vosk-model-small-en-us-0.15": "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip",
-}
+non_imported_dependencies = [
+    "SpeechRecognition[whisper-local]"
+]
 
 # check if we are ran in sudo
 if os.geteuid() != 0:
@@ -28,24 +30,14 @@ for dependency in dependencies:
             print(f"Failed to install {dependencies[dependency]}.")
             sys.exit()
 
-# all models are downloaded to \models
-if not os.path.isdir("models"):
-    os.mkdir("models")
-
-# check if there's any models downloaded
-if len(os.listdir("models")) == 0:
-    print("No models found. Downloading models.")
-    for model in model_options:
-        print(f"Downloading {model}")
-        result = os.system(f"wget {model_options[model]} -O models/{model}.zip")
+# check if non-imported dependencies are installed
+for dependency in non_imported_dependencies:
+    if not importlib.util.find_spec(dependency):
+        print(f"Installing {dependency}")
+        result = os.system(f"pip3 -m install {dependency}")
         if result != 0:
-            print(f"Failed to download {model}.")
+            print(f"Failed to install {dependency}.")
             sys.exit()
-        result = os.system(f"unzip models/{model}.zip -d models/")
-        if result != 0:
-            print(f"Failed to unzip {model}.")
-            sys.exit()
-
 
 RESPEAKER_RATE = 16000
 RESPEAKER_CHANNELS = 2
@@ -54,24 +46,34 @@ RESPEAKER_WIDTH = 2
 RESPEAKER_INDEX = 1
 CHUNK = 1024
 
-p = pyaudio.PyAudio()
-
-stream = p.open(
-    rate=RESPEAKER_RATE,
-    format=p.get_format_from_width(RESPEAKER_WIDTH),
-    channels=RESPEAKER_CHANNELS,
-    input=True,
-    input_device_index=RESPEAKER_INDEX,
-    frames_per_buffer=CHUNK,
-)
-
 r = speech_recognition.Recognizer()
+queue = Queue()
 
-while True:
-    data = stream.read(CHUNK)
+def listening_worker():
+    while True:
+        audio = queue.get()
+        if audio is None:
+            break
+
+        try:
+            text = r.recognize_whisper(audio, language="english")
+            print(text)
+        except speech_recognition.UnknownValueError:
+            print("Could not understand audio")
+        except speech_recognition.RequestError as e:
+            print(f"Could not request results; {e}")
+
+
+listening_thread = Thread(target=listening_worker)
+listening_thread.daemon = True
+listening_thread.start()
+with sr.Microphone() as source:
     try:
-        text = r.recognize_vosk(data)
-        print(text)
-    except Exception as e:
-        print(e)
-        sys.exit()
+        while True:
+            queue.put(r.listen(source))
+    except KeyboardInterrupt:
+        pass
+
+queue.join()
+queue.put(None)
+listening_thread.join()
