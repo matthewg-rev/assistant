@@ -1,11 +1,15 @@
 import os
 import sys
 
-dependencies = ["pyaudio", "speech_recognition", "wave", "vosk"]
+dependencies = {
+    "pyaudio": "pyaudio",
+    "speech_recognition": "speech_recognition",
+    "vosk": "vosk",
+}
 
 # check if we are ran in sudo
 if os.geteuid() != 0:
-    print("Please run as root")
+    print("Please run this script as sudo.")
     sys.exit()
 
 # check if dependencies are installed
@@ -13,14 +17,8 @@ for dependency in dependencies:
     try:
         __import__(dependency)
     except ImportError:
-        print(f"Dependency {dependency} is not installed")
-        print("Would you like to install it? (y/n)")
-        answer = input()
-        if answer.lower() == "y":
-            os.system(f"pip3 install {dependency}")
-        else:
-            print("Exiting...")
-            sys.exit()
+        print(f"Installing {dependencies[dependency]}")
+        os.system(f"pip3 install {dependencies[dependency]}")
 
 RESPEAKER_RATE = 16000
 RESPEAKER_CHANNELS = 2
